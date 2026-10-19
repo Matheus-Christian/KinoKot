@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <circle cx="50" cy="50" r="48" fill="#8B0000" stroke="#EAB308" stroke-width="4"/>
+  <!-- Soviet Cat Ears with Ushanka flap -->
+  <polygon points="25,40 15,10 40,25" fill="#181920" stroke="#EAB308" stroke-width="2"/>
+  <polygon points="75,40 85,10 60,25" fill="#181920" stroke="#EAB308" stroke-width="2"/>
+  <!-- Cat Face -->
+  <ellipse cx="50" cy="55" rx="32" ry="28" fill="#1F2029"/>
+  <!-- Ushanka Cap / Star -->
+  <path d="M22,32 C22,18 78,18 78,32 L78,42 C78,42 66,46 50,46 C34,46 22,42 22,42 Z" fill="#B71C1C" stroke="#EAB308" stroke-width="2"/>
+  <!-- Soviet Gold Star -->
+  <polygon points="50,22 53,30 61,30 55,35 57,43 50,38 43,43 45,35 39,30 47,30" fill="#FACC15"/>
+  <!-- 3D Cinema Glasses -->
+  <rect x="26" y="47" width="20" height="15" rx="3" fill="#00D2FF" stroke="#FACC15" stroke-width="2" opacity="0.9"/>
+  <rect x="54" y="47" width="20" height="15" rx="3" fill="#FF2A4D" stroke="#FACC15" stroke-width="2" opacity="0.9"/>
+  <rect x="46" y="52" width="8" height="4" fill="#FACC15"/>
+  <!-- Cat Nose & Whiskers -->
+  <polygon points="50,67 47,64 53,64" fill="#FACC15"/>
+  <path d="M50,67 C48,72 45,74 41,74 M50,67 C52,72 55,74 59,74" stroke="#FACC15" stroke-width="1.8" fill="none"/>
+  <line x1="20" y1="67" x2="38" y2="69" stroke="#EAB308" stroke-width="1.5"/>
+  <line x1="22" y1="73" x2="38" y2="72" stroke="#EAB308" stroke-width="1.5"/>
+  <line x1="80" y1="67" x2="62" y2="69" stroke="#EAB308" stroke-width="1.5"/>
+  <line x1="78" y1="73" x2="62" y2="72" stroke="#EAB308" stroke-width="1.5"/>
+</svg>

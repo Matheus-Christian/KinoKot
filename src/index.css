@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: #090a0d;
+    background-image: 
+      radial-gradient(circle at 50% 0%, rgba(139, 0, 0, 0.18) 0%, transparent 60%),
+      radial-gradient(circle at 100% 100%, rgba(229, 179, 8, 0.05) 0%, transparent 40%),
+      linear-gradient(to bottom, rgba(16, 17, 22, 0.8), rgba(9, 10, 13, 0.98));
+    background-attachment: fixed;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #101116;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #34384a;
+    border-radius: 4px;
+    border: 1px solid rgba(234, 179, 8, 0.2);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #b71c1c;
+  }
+}
+
+/* Soviet Constructivist diagonal decorative stripes */
+.soviet-stripes {
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(183, 28, 28, 0.08),
+    rgba(183, 28, 28, 0.08) 12px,
+    transparent 12px,
+    transparent 24px
+  );
+}
+
+.gold-border-corner {
+  position: relative;
+}
+.gold-border-corner::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 14px;
+  height: 14px;
+  border-top: 2px solid #eab308;
+  border-left: 2px solid #eab308;
+}
+.gold-border-corner::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 14px;
+  height: 14px;
+  border-bottom: 2px solid #eab308;
+  border-right: 2px solid #eab308;
+}
+
+/* Film Sprocket Strip */
+.film-sprockets {
+  background-image: radial-gradient(#14151c 30%, transparent 35%);
+  background-size: 16px 16px;
+  background-repeat: repeat-x;
+}
+
+/* Pulsing roulette glow */
+@keyframes rouletteGlow {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(234, 179, 8, 0.3), inset 0 0 15px rgba(183, 28, 28, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 35px rgba(234, 179, 8, 0.7), inset 0 0 25px rgba(183, 28, 28, 0.5);
+  }
+}
+
+.roulette-active {
+  animation: rouletteGlow 1.5s infinite alternate;
+}
