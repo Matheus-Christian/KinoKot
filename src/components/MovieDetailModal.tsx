@@ -3,6 +3,7 @@ import type { Movie, Review, UserSession } from '../lib/types';
 import { CatAvatar } from '../assets/cat-avatars';
 import { sounds } from '../lib/soundEffects';
 import { getStreamingService } from '../lib/streamingServices';
+import { createPosterPlaceholder } from '../lib/imdbApi';
 import { Star, X, CheckCircle, Clock, MessageSquare, Send, Play, ExternalLink, Tv } from 'lucide-react';
 
 interface MovieDetailModalProps {
@@ -25,6 +26,16 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
   const isWatched = movie.status === 'watched';
   const movieReviews = reviews.filter(r => r.movie_id === movie.id);
   const existingUserReview = movieReviews.find(r => r.user_id === session.userId);
+
+  // Check if poster is a generated placeholder, svg, or missing, to dynamically wrap full title
+  const isGeneratedPlaceholder = !movie.poster || 
+    movie.poster === 'N/A' || 
+    movie.poster.startsWith('data:image/svg+xml') || 
+    movie.poster.includes('placehold.co');
+
+  const posterSrc = isGeneratedPlaceholder
+    ? createPosterPlaceholder(movie.title, movie.year)
+    : movie.poster;
 
   // Streaming info
   const streamInfo = getStreamingService(movie.stream_service);
@@ -81,12 +92,12 @@ export const MovieDetailModal: React.FC<MovieDetailModalProps> = ({
               {/* Poster */}
               <div className="w-28 sm:w-36 h-40 sm:h-52 rounded-xl overflow-hidden bg-cinema-950 border-2 border-gold-500/50 flex-shrink-0 shadow-2xl">
                 <img
-                  src={movie.poster}
+                  src={posterSrc}
                   alt={movie.title}
                   className="w-full h-full object-cover"
                   referrerPolicy="no-referrer"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = `https://placehold.co/300x450/1b1d26/facc15?text=${encodeURIComponent(movie.title.substring(0, 20))}`;
+                    (e.target as HTMLImageElement).src = createPosterPlaceholder(movie.title, movie.year);
                   }}
                 />
               </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { SearchMovieResult, Movie } from '../lib/types';
-import { searchMovies } from '../lib/imdbApi';
+import { searchMovies, createPosterPlaceholder } from '../lib/imdbApi';
 import { sounds } from '../lib/soundEffects';
 import { STREAMING_SERVICES } from '../lib/streamingServices';
 import { Search, Film, Star, Plus, Check, X, Info, Tv, Link as LinkIcon } from 'lucide-react';
@@ -222,13 +222,17 @@ export const MovieSearchModal: React.FC<MovieSearchModalProps> = ({
                     {/* Poster */}
                     <div className="w-full sm:w-24 h-36 sm:h-36 flex-shrink-0 rounded-lg overflow-hidden bg-cinema-950 border border-cinema-700 relative shadow-md">
                       <img
-                        src={movie.poster}
+                        src={
+                          !movie.poster || movie.poster === 'N/A' || movie.poster.includes('placehold.co')
+                            ? createPosterPlaceholder(movie.title, movie.year)
+                            : movie.poster
+                        }
                         alt={movie.title}
                         className="w-full h-full object-cover"
                         loading="lazy"
                         referrerPolicy="no-referrer"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = `https://placehold.co/300x450/1b1d26/facc15?text=${encodeURIComponent(movie.title.substring(0, 20))}`;
+                          (e.target as HTMLImageElement).src = createPosterPlaceholder(movie.title, movie.year);
                         }}
                       />
                       <div className="absolute top-1 right-1 bg-black/80 px-1.5 py-0.5 rounded text-[10px] font-bold text-gold-400 flex items-center gap-0.5 border border-gold-500/30">

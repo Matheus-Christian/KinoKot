@@ -4,6 +4,7 @@ import { CatAvatar } from '../assets/cat-avatars';
 import { sounds } from '../lib/soundEffects';
 import confetti from 'canvas-confetti';
 import { getStreamingService } from '../lib/streamingServices';
+import { createPosterPlaceholder } from '../lib/imdbApi';
 import { Sparkles, Film, Star, CheckCircle, RotateCcw, X, Play, ExternalLink } from 'lucide-react';
 
 interface RussianRouletteProps {
@@ -83,6 +84,17 @@ export const RussianRoulette: React.FC<RussianRouletteProps> = ({
   }, []);
 
   const displayedMovie = winnerMovie || pendingMovies[currentIndex] || null;
+
+  const isGeneratedPlaceholder = displayedMovie && (
+    !displayedMovie.poster || 
+    displayedMovie.poster === 'N/A' || 
+    displayedMovie.poster.startsWith('data:image/svg+xml') || 
+    displayedMovie.poster.includes('placehold.co')
+  );
+
+  const displayedPosterSrc = displayedMovie
+    ? (isGeneratedPlaceholder ? createPosterPlaceholder(displayedMovie.title, displayedMovie.year) : displayedMovie.poster)
+    : '';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
@@ -165,12 +177,12 @@ export const RussianRoulette: React.FC<RussianRouletteProps> = ({
                 <div className="pt-4 flex flex-col sm:flex-row items-center gap-4 text-left">
                   <div className="w-28 h-40 flex-shrink-0 rounded-xl overflow-hidden bg-cinema-900 border border-cinema-700 relative shadow-xl">
                     <img
-                      src={displayedMovie.poster}
+                      src={displayedPosterSrc}
                       alt={displayedMovie.title}
                       className={`w-full h-full object-cover transition-all ${isSpinning ? 'blur-[1px] scale-95' : 'scale-100'}`}
                       referrerPolicy="no-referrer"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = `https://placehold.co/300x450/1b1d26/facc15?text=${encodeURIComponent(displayedMovie.title.substring(0, 20))}`;
+                        (e.target as HTMLImageElement).src = createPosterPlaceholder(displayedMovie.title, displayedMovie.year);
                       }}
                     />
                     <div className="absolute top-1 right-1 bg-black/80 px-1.5 py-0.5 rounded text-[10px] font-bold text-gold-400 flex items-center gap-0.5">
@@ -184,7 +196,7 @@ export const RussianRoulette: React.FC<RussianRouletteProps> = ({
                       {displayedMovie.genre || 'Cinema Clássico'}
                     </div>
                     
-                    <h3 className={`font-russo text-lg sm:text-xl tracking-wide truncate ${winnerMovie ? 'text-gold-300' : 'text-slate-100'}`}>
+                    <h3 className={`font-russo text-lg sm:text-xl tracking-wide break-words line-clamp-2 leading-snug ${winnerMovie ? 'text-gold-300' : 'text-slate-100'}`}>
                       {displayedMovie.title}
                     </h3>
 

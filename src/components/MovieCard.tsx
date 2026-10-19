@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { Movie, Review } from '../lib/types';
 import { sounds } from '../lib/soundEffects';
 import { getStreamingService } from '../lib/streamingServices';
+import { createPosterPlaceholder } from '../lib/imdbApi';
 import { Star, MessageSquare, CheckCircle, Clock, Trash2, Play, ExternalLink, Tv } from 'lucide-react';
 
 interface MovieCardProps {
@@ -21,6 +22,16 @@ export const MovieCard: React.FC<MovieCardProps> = ({
 }) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const isWatched = movie.status === 'watched';
+
+  // Check if poster is a generated placeholder, svg, or missing, to dynamically wrap full title
+  const isGeneratedPlaceholder = !movie.poster || 
+    movie.poster === 'N/A' || 
+    movie.poster.startsWith('data:image/svg+xml') || 
+    movie.poster.includes('placehold.co');
+
+  const posterSrc = isGeneratedPlaceholder
+    ? createPosterPlaceholder(movie.title, movie.year)
+    : movie.poster;
 
   // Streaming info
   const streamInfo = getStreamingService(movie.stream_service);
@@ -69,13 +80,13 @@ export const MovieCard: React.FC<MovieCardProps> = ({
       {/* Poster area with overlay badges */}
       <div className="relative aspect-[2/3] w-full overflow-hidden bg-cinema-950">
         <img
-          src={movie.poster}
+          src={posterSrc}
           alt={movie.title}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           loading="lazy"
           referrerPolicy="no-referrer"
           onError={(e) => {
-            (e.target as HTMLImageElement).src = `https://placehold.co/300x450/1b1d26/facc15?text=${encodeURIComponent(movie.title.substring(0, 20))}`;
+            (e.target as HTMLImageElement).src = createPosterPlaceholder(movie.title, movie.year);
           }}
         />
 
@@ -181,7 +192,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
       <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
         <div>
           <div className="flex items-baseline justify-between gap-1 mb-1">
-            <h3 className="font-russo text-base text-slate-100 group-hover:text-gold-300 transition-colors line-clamp-1">
+            <h3 className="font-russo text-base text-slate-100 group-hover:text-gold-300 transition-colors line-clamp-2 break-words leading-snug">
               {movie.title}
             </h3>
             {movie.year && (

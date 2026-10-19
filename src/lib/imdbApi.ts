@@ -110,32 +110,115 @@ const TITLE_ALIASES: Record<string, string> = {
   'apocalypse now': 'Apocalypse Now',
 };
 
-// Generates an elegant SVG poster with title if an image is missing
-function createPosterPlaceholder(title: string, year: string): string {
+function escapeXml(unsafe: string): string {
+  return (unsafe || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+function wrapTitle(text: string): { lines: string[]; fontSize: number; lineHeight: number } {
+  const clean = (text || '').trim();
+  const len = clean.length;
+
+  let fontSize = 20;
+  let lineHeight = 26;
+  let maxChars = 16;
+
+  if (len > 50) {
+    fontSize = 13;
+    lineHeight = 17;
+    maxChars = 26;
+  } else if (len > 30) {
+    fontSize = 15;
+    lineHeight = 20;
+    maxChars = 21;
+  } else if (len > 15) {
+    fontSize = 17;
+    lineHeight = 23;
+    maxChars = 18;
+  } else {
+    fontSize = 20;
+    lineHeight = 26;
+    maxChars = 16;
+  }
+
+  const words = clean.split(/\s+/);
+  const lines: string[] = [];
+  let currentLine = '';
+
+  for (const word of words) {
+    if (word.length > maxChars) {
+      if (currentLine) {
+        lines.push(currentLine);
+        currentLine = '';
+      }
+      for (let i = 0; i < word.length; i += maxChars) {
+        lines.push(word.slice(i, i + maxChars));
+      }
+    } else if (!currentLine) {
+      currentLine = word;
+    } else if ((currentLine + ' ' + word).length <= maxChars) {
+      currentLine += ' ' + word;
+    } else {
+      lines.push(currentLine);
+      currentLine = word;
+    }
+  }
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+
+  return { lines: lines.length > 0 ? lines : [clean || 'FILME'], fontSize, lineHeight };
+}
+
+// Generates an elegant SVG poster with complete wrapped title if an image is missing
+export function createPosterPlaceholder(title: string, year?: string): string {
+  const { lines, fontSize, lineHeight } = wrapTitle(title);
+  
+  // Center lines vertically in the title region between y=210 and y=345
+  const totalTextHeight = (lines.length - 1) * lineHeight;
+  const startY = Math.round(270 - totalTextHeight / 2);
+
+  const tspans = lines.map((line, idx) => {
+    const lineY = startY + idx * lineHeight;
+    return `<tspan x="150" y="${lineY}">${escapeXml(line)}</tspan>`;
+  }).join('\n    ');
+
+  const cleanYear = escapeXml((year || 'CINEMA').toString().trim());
+
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 450" width="300" height="450">
     <defs>
       <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stop-color="#1b1d26"/>
-        <stop offset="50%" stop-color="#12131a"/>
+        <stop offset="0%" stop-color="#1c1917"/>
+        <stop offset="50%" stop-color="#141110"/>
         <stop offset="100%" stop-color="#0a0a0d"/>
       </linearGradient>
       <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stop-color="#fde047"/>
+        <stop offset="0%" stop-color="#fef08a"/>
+        <stop offset="50%" stop-color="#facc15"/>
         <stop offset="100%" stop-color="#ca8a04"/>
+      </linearGradient>
+      <linearGradient id="emblemGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#991b1b"/>
+        <stop offset="100%" stop-color="#580e0e"/>
       </linearGradient>
     </defs>
     <rect width="300" height="450" fill="url(#bg)"/>
-    <rect x="15" y="15" width="270" height="420" rx="8" fill="none" stroke="#ca8a04" stroke-width="2" stroke-dasharray="8 4" opacity="0.6"/>
-    <circle cx="150" cy="180" r="55" fill="#8B0000" stroke="#facc15" stroke-width="3"/>
-    <polygon points="150,140 157,162 180,162 161,176 168,198 150,184 132,198 139,176 120,162 143,162" fill="#FACC15"/>
-    <text x="150" y="280" font-family="sans-serif" font-weight="900" font-size="20" fill="url(#gold)" text-anchor="middle">
-      ${title.length > 22 ? title.substring(0, 20) + '...' : title}
+    <rect x="14" y="14" width="272" height="422" rx="10" fill="none" stroke="#ca8a04" stroke-width="2" stroke-dasharray="8 4" opacity="0.6"/>
+    <rect x="18" y="18" width="264" height="414" rx="8" fill="none" stroke="#78350f" stroke-width="1" opacity="0.4"/>
+    <circle cx="150" cy="140" r="48" fill="url(#emblemGrad)" stroke="#facc15" stroke-width="3"/>
+    <polygon points="150,105 158,128 181,128 163,142 170,165 150,150 130,165 137,142 119,128 142,128" fill="#FACC15"/>
+    <text x="150" font-family="'Russo One', Impact, sans-serif" font-weight="900" font-size="${fontSize}" fill="url(#gold)" text-anchor="middle" letter-spacing="0.5">
+    ${tspans}
     </text>
-    <text x="150" y="315" font-family="sans-serif" font-weight="bold" font-size="14" fill="#94a3b8" text-anchor="middle">
+    <text x="150" y="375" font-family="'Russo One', sans-serif" font-weight="bold" font-size="13" fill="#cbd5e1" text-anchor="middle" letter-spacing="1.5">
       ★ KINOKOTT CINEMA ★
     </text>
-    <text x="150" y="345" font-family="monospace" font-size="13" fill="#eab308" text-anchor="middle">
-      (${year || 'CINEMA'})
+    <text x="150" y="402" font-family="monospace" font-size="12" fill="#eab308" text-anchor="middle" letter-spacing="1">
+      (${cleanYear})
     </text>
   </svg>`;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
