@@ -1,5 +1,6 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type { Room, RoomMember, Movie, Review } from './types';
+import { saveRoomHostKey, getRoomHostKey } from './storage';
 
 const env = (typeof import.meta !== 'undefined' && import.meta ? (import.meta as any).env : {}) || {};
 const supabaseUrl: string = env.VITE_SUPABASE_URL || 'https://vvcmznvpbaevyqtvhljp.supabase.co';
@@ -70,29 +71,62 @@ function setLocalData<T>(key: string, data: T): void {
 // =========================================================================
 export const RoomService = {
   // Create Room
-  async createRoom(name: string, isPrivate: boolean, createdByUserId: string): Promise<Room> {
+  async createRoom(name: string, isPrivate: boolean, createdByUserId: string, customHostKey?: string): Promise<Room> {
     const roomCode = 'KOTT-' + Math.floor(1000 + Math.random() * 9000);
+    const hostKey = customHostKey && customHostKey.trim().length > 0 
+      ? customHostKey.trim() 
+      : Math.floor(1000 + Math.random() * 9000).toString();
+
     const newRoom: Room = {
       id: crypto.randomUUID ? crypto.randomUUID() : 'room_' + Date.now(),
       code: roomCode,
       name,
       is_private: isPrivate,
+      host_key: hostKey,
       created_by_user_id: createdByUserId,
       created_at: new Date().toISOString()
     };
 
+    saveRoomHostKey(roomCode, hostKey);
+
     if (isSupabaseConfigured && supabase) {
-      const { data, error } = await supabase
+      let data: any = null;
+
+      // Try inserting with host_key column
+      const res = await supabase
         .from('rooms')
         .insert([{
           code: roomCode,
           name,
           is_private: isPrivate,
-          created_by_user_id: createdByUserId
+          created_by_user_id: createdByUserId,
+          host_key: hostKey
         }])
         .select()
         .single();
-      if (error) throw error;
+
+      if (res.error && (res.error.code === '42703' || res.error.code === 'PGRST204')) {
+        // Fallback if column host_key does not exist yet in Supabase table
+        console.warn('rooms table missing host_key column, inserting without it...');
+        const retry = await supabase
+          .from('rooms')
+          .insert([{
+            code: roomCode,
+            name,
+            is_private: isPrivate,
+            created_by_user_id: createdByUserId
+          }])
+          .select()
+          .single();
+
+        if (retry.error) throw retry.error;
+        data = { ...retry.data, host_key: hostKey };
+      } else if (res.error) {
+        throw res.error;
+      } else {
+        data = res.data;
+      }
+
       return data;
     } else {
       const rooms = getLocalData<Room[]>('rooms', []);
@@ -112,10 +146,21 @@ export const RoomService = {
         .ilike('code', formattedCode)
         .maybeSingle();
       if (error) throw error;
+      if (!data) return null;
+
+      const localKey = getRoomHostKey(data.code);
+      if (!data.host_key && localKey) {
+        data.host_key = localKey;
+      }
       return data;
     } else {
       const rooms = getLocalData<Room[]>('rooms', []);
-      return rooms.find(r => r.code.toUpperCase() === formattedCode) || null;
+      const r = rooms.find(room => room.code.toUpperCase() === formattedCode) || null;
+      if (r && !r.host_key) {
+        const localKey = getRoomHostKey(r.code);
+        if (localKey) r.host_key = localKey;
+      }
+      return r;
     }
   },
 
@@ -128,10 +173,70 @@ export const RoomService = {
         .eq('id', id)
         .maybeSingle();
       if (error) throw error;
+      if (!data) return null;
+
+      const localKey = getRoomHostKey(data.code);
+      if (!data.host_key && localKey) {
+        data.host_key = localKey;
+      }
       return data;
     } else {
       const rooms = getLocalData<Room[]>('rooms', []);
-      return rooms.find(r => r.id === id) || null;
+      const r = rooms.find(room => room.id === id) || null;
+      if (r && !r.host_key) {
+        const localKey = getRoomHostKey(r.code);
+        if (localKey) r.host_key = localKey;
+      }
+      return r;
+    }
+  },
+
+  // Claim Host Rights using Host Key
+  async claimHostWithKey(
+    roomId: string, 
+    userId: string, 
+    key: string
+  ): Promise<{ success: boolean; error?: string; member?: RoomMember }> {
+    const room = await this.getRoomById(roomId);
+    if (!room) return { success: false, error: 'Sala não encontrada.' };
+
+    const expectedKey = (room.host_key || getRoomHostKey(room.code) || '').trim().toUpperCase();
+    const cleanKey = key.trim().toUpperCase();
+
+    if (!expectedKey || cleanKey !== expectedKey) {
+      return { success: false, error: 'Chave do anfitrião incorreta.' };
+    }
+
+    saveRoomHostKey(room.code, cleanKey);
+
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase
+        .from('room_members')
+        .update({ role: 'host', status: 'approved' })
+        .eq('room_id', roomId)
+        .eq('user_id', userId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Also transfer creator ownership
+      await supabase
+        .from('rooms')
+        .update({ created_by_user_id: userId })
+        .eq('id', roomId);
+
+      return { success: true, member: data };
+    } else {
+      const members = getLocalData<RoomMember[]>('members', []);
+      const idx = members.findIndex(m => m.room_id === roomId && m.user_id === userId);
+      if (idx >= 0) {
+        members[idx].role = 'host';
+        members[idx].status = 'approved';
+        setLocalData('members', members);
+        return { success: true, member: members[idx] };
+      }
+      return { success: false, error: 'Membro não encontrado.' };
     }
   },
 

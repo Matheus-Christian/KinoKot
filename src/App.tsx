@@ -7,7 +7,7 @@ import type {
   UserSession, 
   SearchMovieResult 
 } from './lib/types';
-import { getStoredSession } from './lib/storage';
+import { getStoredSession, saveRoomHostKey, getRoomHostKey } from './lib/storage';
 import { RoomService } from './lib/supabase';
 import { sounds } from './lib/soundEffects';
 
@@ -40,14 +40,19 @@ export const App: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Check URL query param for room invitation code
+  // Check URL query param for room invitation code and host key
   const [initialRoomCode, setInitialRoomCode] = useState<string>('');
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const code = params.get('room');
+    const hostKeyParam = params.get('host_key') || params.get('key');
     if (code) {
-      setInitialRoomCode(code.trim().toUpperCase());
+      const cleanCode = code.trim().toUpperCase();
+      setInitialRoomCode(cleanCode);
+      if (hostKeyParam) {
+        saveRoomHostKey(cleanCode, hostKeyParam.trim().toUpperCase());
+      }
     }
   }, []);
 
@@ -96,11 +101,11 @@ export const App: React.FC = () => {
   }, [currentRoom, refreshRoomData]);
 
   // Handle Create Room
-  const handleCreateRoom = async (roomName: string, isPrivate: boolean) => {
+  const handleCreateRoom = async (roomName: string, isPrivate: boolean, hostKey?: string) => {
     setLoading(true);
     setError(null);
     try {
-      const newRoom = await RoomService.createRoom(roomName, isPrivate, session.userId);
+      const newRoom = await RoomService.createRoom(roomName, isPrivate, session.userId, hostKey);
       const hostMember = await RoomService.joinRoom(
         newRoom.id,
         session.userId,
@@ -124,18 +129,30 @@ export const App: React.FC = () => {
   };
 
   // Handle Join Room
-  const handleJoinRoom = async (code: string) => {
+  const handleJoinRoom = async (code: string, hostKeyAttempt?: string) => {
     setLoading(true);
     setError(null);
     try {
-      const room = await RoomService.getRoomByCode(code);
+      const cleanCode = code.trim().toUpperCase();
+      const room = await RoomService.getRoomByCode(cleanCode);
       if (!room) {
-        setError(`A sala com o código "${code}" não foi encontrada no registro.`);
+        setError(`A sala com o código "${cleanCode}" não foi encontrada no registro.`);
         return;
       }
 
-      // Check if user is creator / host
-      const isHost = room.created_by_user_id === session.userId;
+      // Check if user is creator or has valid host key
+      const savedKey = getRoomHostKey(room.code);
+      const candidateKey = (hostKeyAttempt?.trim() || savedKey || '').toUpperCase();
+      const expectedKey = (room.host_key || savedKey || '').trim().toUpperCase();
+
+      const isHostByKey = Boolean(candidateKey && expectedKey && candidateKey === expectedKey);
+      const isCreator = room.created_by_user_id === session.userId;
+      const isHost = isCreator || isHostByKey;
+
+      if (isHostByKey && candidateKey) {
+        saveRoomHostKey(room.code, candidateKey);
+      }
+
       const member = await RoomService.joinRoom(
         room.id,
         session.userId,
@@ -145,10 +162,21 @@ export const App: React.FC = () => {
         room.is_private
       );
 
-      setCurrentRoom(room);
-      setCurrentMember(member);
+      // If user provided valid host key and wasn't creator in DB, update creator ownership
+      if (isHostByKey && member.role !== 'host') {
+        const claimResult = await RoomService.claimHostWithKey(room.id, session.userId, candidateKey);
+        if (claimResult.success && claimResult.member) {
+          setCurrentMember(claimResult.member);
+        } else {
+          setCurrentMember(member);
+        }
+      } else {
+        setCurrentMember(member);
+      }
 
-      if (member.status === 'approved') {
+      setCurrentRoom(room);
+
+      if (isHost || member.status === 'approved') {
         sounds.playVictory();
       } else {
         sounds.playBell();
@@ -159,6 +187,23 @@ export const App: React.FC = () => {
       setError(err?.message || 'Falha ao entrar na sala. Tente novamente.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Handle Host Recovery Claim via Secret Key
+  const handleClaimHost = async (key: string): Promise<{ success: boolean; error?: string }> => {
+    if (!currentRoom) return { success: false, error: 'Sala não encontrada.' };
+    try {
+      const result = await RoomService.claimHostWithKey(currentRoom.id, session.userId, key);
+      if (result.success && result.member) {
+        setCurrentMember(result.member);
+        sounds.playVictory();
+        await refreshRoomData(currentRoom.id);
+        return { success: true };
+      }
+      return { success: false, error: result.error || 'Chave do anfitrião incorreta.' };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Erro ao autenticar como anfitrião.' };
     }
   };
 
@@ -257,7 +302,8 @@ export const App: React.FC = () => {
     await refreshRoomData(currentRoom.id);
   };
 
-  // Pending members calculation
+  // Members calculations
+  const approvedMembers = members.filter(m => m.status === 'approved');
   const pendingMembers = members.filter(m => m.status === 'pending');
 
   return (
@@ -281,6 +327,8 @@ export const App: React.FC = () => {
         <WaitingRoom
           room={currentRoom}
           member={currentMember}
+          approvedMembersCount={approvedMembers.length}
+          onClaimHost={handleClaimHost}
           onCancel={handleLeaveRoom}
         />
       )}

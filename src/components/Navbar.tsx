@@ -13,7 +13,8 @@ import {
   Globe, 
   LogOut, 
   ShieldAlert,
-  UserX
+  UserX,
+  Key
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -134,6 +135,21 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </span>
                   )}
                 </span>
+                {room.host_key && currentMember.role === 'host' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sounds.playClick();
+                      navigator.clipboard.writeText(room.host_key!);
+                      alert(`Chave Secreta do Anfitrião copiada: ${room.host_key}\n\nGuarde esta chave! Com ela você pode destrancar e recuperar o controle total desta sala em qualquer dispositivo ou navegador.`);
+                    }}
+                    title="Chave Secreta do Anfitrião (Clique para copiar)"
+                    className="hidden sm:flex items-center gap-1 font-mono text-[10px] text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 px-1.5 py-0.5 rounded border border-amber-500/30 transition-colors"
+                  >
+                    <Key className="w-2.5 h-2.5 text-amber-400" />
+                    <span>Chave: {room.host_key}</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>

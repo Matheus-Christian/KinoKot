@@ -126,6 +126,33 @@ class SoundManager {
       // Audio error ignored
     }
   }
+
+  // Warning / Access denied buzzer
+  playWarning() {
+    if (!getSoundEnabled()) return;
+    const ctx = this.getAudioContext();
+    if (!ctx) return;
+
+    try {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(180, ctx.currentTime);
+      osc.frequency.setValueAtTime(140, ctx.currentTime + 0.1);
+
+      gain.gain.setValueAtTime(0.2, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start();
+      osc.stop(ctx.currentTime + 0.25);
+    } catch {
+      // Audio error ignored
+    }
+  }
 }
 
 export const sounds = new SoundManager();

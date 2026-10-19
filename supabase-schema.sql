@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS public.rooms (
     code VARCHAR(32) NOT NULL UNIQUE,
     name VARCHAR(120) NOT NULL,
     is_private BOOLEAN DEFAULT false NOT NULL,
+    host_key VARCHAR(64),
     created_by_user_id UUID NOT NULL,
     created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -56,7 +57,8 @@ CREATE TABLE IF NOT EXISTS public.movies (
     created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Migração rápida caso a tabela movies já tenha sido criada:
+-- Migrações rápidas caso as tabelas já tenham sido criadas:
+ALTER TABLE public.rooms ADD COLUMN IF NOT EXISTS host_key VARCHAR(64);
 ALTER TABLE public.movies ADD COLUMN IF NOT EXISTS stream_service VARCHAR(50);
 ALTER TABLE public.movies ADD COLUMN IF NOT EXISTS stream_url TEXT;
 

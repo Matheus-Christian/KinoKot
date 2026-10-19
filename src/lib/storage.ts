@@ -42,3 +42,28 @@ export function getSoundEnabled(): boolean {
 export function setSoundEnabled(enabled: boolean): void {
   localStorage.setItem(SOUND_KEY, enabled ? 'true' : 'false');
 }
+
+// Host Key persistence for seamless recovery of created rooms
+const HOST_KEYS_STORAGE = 'kinokott_host_keys';
+
+export function saveRoomHostKey(roomCode: string, hostKey: string): void {
+  try {
+    const raw = localStorage.getItem(HOST_KEYS_STORAGE);
+    const keys = raw ? JSON.parse(raw) : {};
+    keys[roomCode.toUpperCase()] = hostKey;
+    localStorage.setItem(HOST_KEYS_STORAGE, JSON.stringify(keys));
+  } catch (e) {
+    console.warn('Error saving room host key', e);
+  }
+}
+
+export function getRoomHostKey(roomCode: string): string | null {
+  try {
+    const raw = localStorage.getItem(HOST_KEYS_STORAGE);
+    if (!raw) return null;
+    const keys = JSON.parse(raw);
+    return keys[roomCode.toUpperCase()] || null;
+  } catch (e) {
+    return null;
+  }
+}

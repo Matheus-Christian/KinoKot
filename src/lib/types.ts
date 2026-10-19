@@ -7,6 +7,7 @@ export interface Room {
   code: string;
   name: string;
   is_private: boolean;
+  host_key?: string;
   created_by_user_id: string;
   created_at: string;
 }

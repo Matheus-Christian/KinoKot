@@ -3,13 +3,13 @@ import type { UserSession } from '../lib/types';
 import { CatAvatar, AVATAR_OPTIONS } from '../assets/cat-avatars';
 import { saveSession } from '../lib/storage';
 import { sounds } from '../lib/soundEffects';
-import { Film, Lock, Globe, Sparkles, ArrowRight, Star, ShieldCheck } from 'lucide-react';
+import { Film, Lock, Globe, Sparkles, ArrowRight, Star, ShieldCheck, Key } from 'lucide-react';
 
 interface RoomLobbyProps {
   session: UserSession;
   onUpdateSession: (newSession: UserSession) => void;
-  onCreateRoom: (roomName: string, isPrivate: boolean) => Promise<void>;
-  onJoinRoom: (roomCode: string) => Promise<void>;
+  onCreateRoom: (roomName: string, isPrivate: boolean, hostKey?: string) => Promise<void>;
+  onJoinRoom: (roomCode: string, hostKey?: string) => Promise<void>;
   initialRoomCode?: string;
   loading: boolean;
   error: string | null;
@@ -33,9 +33,12 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
   // Room Create state
   const [roomName, setRoomName] = useState('Cinema Bolshoi');
   const [isPrivate, setIsPrivate] = useState(false);
+  const [customHostKey, setCustomHostKey] = useState('');
 
   // Room Join state
   const [roomCode, setRoomCode] = useState(initialRoomCode);
+  const [joinHostKey, setJoinHostKey] = useState('');
+  const [showHostKeyInput, setShowHostKeyInput] = useState(false);
 
   useEffect(() => {
     if (initialRoomCode) {
@@ -64,14 +67,14 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
     e.preventDefault();
     if (!roomName.trim()) return;
     sounds.playClick();
-    await onCreateRoom(roomName.trim(), isPrivate);
+    await onCreateRoom(roomName.trim(), isPrivate, customHostKey.trim() || undefined);
   };
 
   const handleJoinSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!roomCode.trim()) return;
     sounds.playClick();
-    await onJoinRoom(roomCode.trim());
+    await onJoinRoom(roomCode.trim(), joinHostKey.trim() || undefined);
   };
 
   return (
@@ -286,6 +289,30 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
                 </div>
               </div>
 
+              {/* Optional Host Key input for private rooms */}
+              {isPrivate && (
+                <div className="bg-cinema-950/80 p-4 rounded-xl border border-amber-500/30 space-y-2 animate-in fade-in">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-amber-300 flex items-center gap-1.5">
+                      <Key className="w-3.5 h-3.5 text-amber-400" />
+                      Chave Secreta do Anfitrião (PIN / Senha):
+                    </label>
+                    <span className="text-[10px] text-slate-400 font-mono">Opcional</span>
+                  </div>
+                  <input
+                    type="text"
+                    value={customHostKey}
+                    onChange={(e) => setCustomHostKey(e.target.value)}
+                    placeholder="Ex: 1917 ou sua senha secreta (gerada se vazia)"
+                    maxLength={30}
+                    className="w-full bg-cinema-900 border border-cinema-700 focus:border-gold-500 rounded-lg px-3 py-2 text-xs text-slate-100 placeholder-slate-500 font-mono"
+                  />
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    🛡️ <strong>Garantia do Anfitrião:</strong> Se você sair da sala, fechar o navegador ou acessar de outro aparelho, use essa chave para recuperar o controle total do cinema instantaneamente!
+                  </p>
+                </div>
+              )}
+
               <button
                 type="submit"
                 disabled={loading || !roomName.trim()}
@@ -329,12 +356,38 @@ export const RoomLobby: React.FC<RoomLobbyProps> = ({
                 </p>
               </div>
 
+              {/* Host Key Option */}
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => setShowHostKeyInput(!showHostKeyInput)}
+                  className="text-xs text-gold-400 hover:text-gold-300 flex items-center gap-1.5 transition-colors font-medium"
+                >
+                  <Key className="w-3.5 h-3.5 text-gold-400" />
+                  <span>{showHostKeyInput ? 'Ocultar Chave do Anfitrião' : 'Possui a Chave Secreta do Anfitrião? (Opcional)'}</span>
+                </button>
+                {showHostKeyInput && (
+                  <div className="bg-cinema-950/80 p-3 rounded-xl border border-gold-500/30 space-y-1.5 animate-in fade-in">
+                    <input
+                      type="password"
+                      value={joinHostKey}
+                      onChange={(e) => setJoinHostKey(e.target.value)}
+                      placeholder="Digite a Chave Secreta do Anfitrião..."
+                      className="w-full bg-cinema-900 border border-cinema-700 focus:border-gold-500 rounded-lg px-3 py-2 text-xs text-slate-100 placeholder-slate-500 font-mono"
+                    />
+                    <p className="text-[11px] text-slate-400">
+                      Insira a chave caso seja o anfitrião acessando de outro dispositivo para entrar direto sem passar pela portaria.
+                    </p>
+                  </div>
+                )}
+              </div>
+
               <div className="bg-cinema-950/60 border border-cinema-700/80 rounded-xl p-4 flex items-start gap-3">
                 <ShieldCheck className="w-5 h-5 text-gold-400 flex-shrink-0 mt-0.5" />
                 <div className="text-xs text-slate-300 space-y-1">
                   <p className="font-semibold text-gold-400">Como funciona o ingresso:</p>
                   <p>
-                    Salas públicas concedem entrada imediata. Em salas privadas, você aguardará na portaria até que um camarada aprove seu ingresso em tempo real.
+                    Salas públicas concedem entrada imediata. Em salas privadas, você aguardará na portaria até que um camarada aprove seu ingresso em tempo real (ou use a Chave do Anfitrião).
                   </p>
                 </div>
               </div>
