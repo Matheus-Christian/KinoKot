@@ -67,3 +67,30 @@ export function getRoomHostKey(roomCode: string): string | null {
     return null;
   }
 }
+
+// Active Room session persistence
+const ACTIVE_ROOM_KEY = 'kinokott_active_room_code';
+
+export function saveActiveRoomCode(roomCode: string): void {
+  try {
+    localStorage.setItem(ACTIVE_ROOM_KEY, roomCode.toUpperCase());
+  } catch (e) {
+    console.error('Error saving active room code', e);
+  }
+}
+
+export function getActiveRoomCode(): string | null {
+  try {
+    return localStorage.getItem(ACTIVE_ROOM_KEY);
+  } catch (e) {
+    return null;
+  }
+}
+
+export function clearActiveRoomCode(): void {
+  try {
+    localStorage.removeItem(ACTIVE_ROOM_KEY);
+  } catch (e) {
+    console.error('Error clearing active room code', e);
+  }
+}

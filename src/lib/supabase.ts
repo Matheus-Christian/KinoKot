@@ -249,21 +249,34 @@ export const RoomService = {
     role: 'host' | 'member',
     isPrivate: boolean
   ): Promise<RoomMember> {
-    const status = role === 'host' ? 'approved' : (isPrivate ? 'pending' : 'approved');
-    const member: RoomMember = {
-      id: crypto.randomUUID ? crypto.randomUUID() : 'member_' + Date.now(),
-      room_id: roomId,
-      user_id: userId,
-      nickname,
-      avatar,
-      role,
-      status,
-      joined_at: new Date().toISOString(),
-      last_seen: new Date().toISOString()
-    };
-
     if (isSupabaseConfigured && supabase) {
-      // Upsert member
+      // Check if user is already a member of this room to preserve their approval / host status
+      const { data: existing } = await supabase
+        .from('room_members')
+        .select('*')
+        .eq('room_id', roomId)
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      let finalRole: 'host' | 'member' = role;
+      let finalStatus: 'approved' | 'pending' | 'rejected';
+
+      if (existing) {
+        if (existing.role === 'host') {
+          finalRole = 'host';
+        }
+        if (existing.status === 'approved') {
+          finalStatus = 'approved';
+        } else if (existing.status === 'rejected') {
+          finalStatus = 'rejected';
+        } else {
+          finalStatus = finalRole === 'host' ? 'approved' : (isPrivate ? 'pending' : 'approved');
+        }
+      } else {
+        finalStatus = finalRole === 'host' ? 'approved' : (isPrivate ? 'pending' : 'approved');
+      }
+
+      // Upsert member with preserved approval
       const { data, error } = await supabase
         .from('room_members')
         .upsert([{
@@ -271,8 +284,8 @@ export const RoomService = {
           user_id: userId,
           nickname,
           avatar,
-          role,
-          status,
+          role: finalRole,
+          status: finalStatus,
           last_seen: new Date().toISOString()
         }], { onConflict: 'room_id,user_id' })
         .select()
@@ -283,7 +296,22 @@ export const RoomService = {
       const members = getLocalData<RoomMember[]>('members', []);
       const idx = members.findIndex(m => m.room_id === roomId && m.user_id === userId);
       if (idx >= 0) {
-        members[idx] = { ...members[idx], nickname, avatar, status };
+        const existing = members[idx];
+        const finalRole = existing.role === 'host' ? 'host' : role;
+        const finalStatus = existing.status === 'approved'
+          ? 'approved'
+          : (existing.status === 'rejected'
+              ? 'rejected'
+              : (finalRole === 'host' ? 'approved' : (isPrivate ? 'pending' : 'approved')));
+
+        members[idx] = { 
+          ...existing, 
+          nickname, 
+          avatar, 
+          role: finalRole, 
+          status: finalStatus,
+          last_seen: new Date().toISOString() 
+        };
         setLocalData('members', members);
         broadcastChannel?.postMessage({
           type: 'MEMBER_JOINED',
@@ -292,6 +320,18 @@ export const RoomService = {
         });
         return members[idx];
       } else {
+        const status = role === 'host' ? 'approved' : (isPrivate ? 'pending' : 'approved');
+        const member: RoomMember = {
+          id: crypto.randomUUID ? crypto.randomUUID() : 'member_' + Date.now(),
+          room_id: roomId,
+          user_id: userId,
+          nickname,
+          avatar,
+          role,
+          status,
+          joined_at: new Date().toISOString(),
+          last_seen: new Date().toISOString()
+        };
         members.push(member);
         setLocalData('members', members);
         broadcastChannel?.postMessage({

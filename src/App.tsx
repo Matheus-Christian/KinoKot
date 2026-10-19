@@ -7,7 +7,14 @@ import type {
   UserSession, 
   SearchMovieResult 
 } from './lib/types';
-import { getStoredSession, saveRoomHostKey, getRoomHostKey } from './lib/storage';
+import { 
+  getStoredSession, 
+  saveRoomHostKey, 
+  getRoomHostKey, 
+  saveActiveRoomCode, 
+  getActiveRoomCode, 
+  clearActiveRoomCode 
+} from './lib/storage';
 import { RoomService } from './lib/supabase';
 import { sounds } from './lib/soundEffects';
 
@@ -46,19 +53,7 @@ export const App: React.FC = () => {
 
   // Check URL query param for room invitation code and host key
   const [initialRoomCode, setInitialRoomCode] = useState<string>('');
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get('room');
-    const hostKeyParam = params.get('host_key') || params.get('key');
-    if (code) {
-      const cleanCode = code.trim().toUpperCase();
-      setInitialRoomCode(cleanCode);
-      if (hostKeyParam) {
-        saveRoomHostKey(cleanCode, hostKeyParam.trim().toUpperCase());
-      }
-    }
-  }, []);
+  const hasAutoJoinedRef = useRef<boolean>(false);
 
   // Sync Room Data (Members, Movies, Reviews)
   const refreshRoomData = useCallback(async (roomId: string) => {
@@ -145,6 +140,7 @@ export const App: React.FC = () => {
 
       setCurrentRoom(newRoom);
       setCurrentMember(hostMember);
+      saveActiveRoomCode(newRoom.code);
       sounds.playVictory();
 
       // Update URL without page reload
@@ -156,14 +152,15 @@ export const App: React.FC = () => {
     }
   };
 
-  // Handle Join Room
-  const handleJoinRoom = async (code: string, hostKeyAttempt?: string) => {
+  // Handle Join Room (persistent login capable)
+  const handleJoinRoom = async (code: string, hostKeyAttempt?: string, isSilent: boolean = false) => {
     setLoading(true);
     setError(null);
     try {
       const cleanCode = code.trim().toUpperCase();
       const room = await RoomService.getRoomByCode(cleanCode);
       if (!room) {
+        clearActiveRoomCode();
         setError(`A sala com o código "${cleanCode}" não foi encontrada no registro.`);
         return;
       }
@@ -203,11 +200,14 @@ export const App: React.FC = () => {
       }
 
       setCurrentRoom(room);
+      saveActiveRoomCode(room.code);
 
-      if (isHost || member.status === 'approved') {
-        sounds.playVictory();
-      } else {
-        sounds.playBell();
+      if (!isSilent) {
+        if (isHost || member.status === 'approved') {
+          sounds.playVictory();
+        } else {
+          sounds.playBell();
+        }
       }
 
       window.history.replaceState({}, '', `?room=${room.code}`);
@@ -235,9 +235,30 @@ export const App: React.FC = () => {
     }
   };
 
-  // Handle Leave Room
+  // Initial mount: Check URL query param and stored active room for persistent login
+  useEffect(() => {
+    if (hasAutoJoinedRef.current) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const urlCode = params.get('room');
+    const hostKeyParam = params.get('host_key') || params.get('key');
+    const savedActiveCode = getActiveRoomCode();
+    const effectiveCode = (urlCode || savedActiveCode || '').trim().toUpperCase();
+
+    if (effectiveCode) {
+      setInitialRoomCode(effectiveCode);
+      if (hostKeyParam) {
+        saveRoomHostKey(effectiveCode, hostKeyParam.trim().toUpperCase());
+      }
+      hasAutoJoinedRef.current = true;
+      handleJoinRoom(effectiveCode, undefined, true);
+    }
+  }, []);
+
+  // Handle Leave Room (Deslogar da sessão)
   const handleLeaveRoom = () => {
     sounds.playClick();
+    clearActiveRoomCode();
     prevPendingMemberIdsRef.current = new Set();
     isInitialSyncRef.current = true;
     setCurrentRoom(null);
