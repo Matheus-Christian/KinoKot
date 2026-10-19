@@ -48,23 +48,23 @@ export const MovieList: React.FC<MovieListProps> = ({
     <div className="space-y-6">
       
       {/* Controls Bar: Filters + Search + Actions */}
-      <div className="bg-cinema-900/90 border border-gold-500/30 rounded-2xl p-4 sm:p-5 shadow-xl flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+      <div className="bg-cinema-900/90 border border-gold-500/30 rounded-2xl p-3 sm:p-5 shadow-xl flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 sm:gap-4">
         
-        {/* Filter Pills */}
-        <div className="flex items-center gap-1.5 p-1 bg-cinema-950 rounded-xl border border-cinema-700/80 overflow-x-auto">
+        {/* Filter Tabs (Responsive 3-Column Grid on Mobile, Flex on Desktop) */}
+        <div className="grid grid-cols-3 gap-1 p-1 bg-cinema-950 rounded-xl border border-cinema-700/80 w-full md:w-auto">
           <button
             onClick={() => {
               sounds.playClick();
               setFilter('all');
             }}
-            className={`px-3 py-1.5 rounded-lg text-xs font-russo tracking-wide transition-all whitespace-nowrap flex items-center gap-1.5 ${
+            className={`w-full justify-center px-1.5 sm:px-3.5 py-2 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-russo tracking-wide transition-all flex items-center gap-1 sm:gap-1.5 ${
               filter === 'all'
                 ? 'bg-soviet-800 text-gold-300 shadow-md border border-gold-500/40'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <Film className="w-3.5 h-3.5" />
-            <span>TODOS ({movies.length})</span>
+            <Film className="w-3.5 h-3.5 flex-shrink-0" />
+            <span className="truncate">TODOS ({movies.length})</span>
           </button>
 
           <button
@@ -72,14 +72,16 @@ export const MovieList: React.FC<MovieListProps> = ({
               sounds.playClick();
               setFilter('pending');
             }}
-            className={`px-3 py-1.5 rounded-lg text-xs font-russo tracking-wide transition-all whitespace-nowrap flex items-center gap-1.5 ${
+            className={`w-full justify-center px-1.5 sm:px-3.5 py-2 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-russo tracking-wide transition-all flex items-center gap-1 sm:gap-1.5 ${
               filter === 'pending'
                 ? 'bg-amber-600/90 text-white shadow-md border border-amber-400/60'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <Clock className="w-3.5 h-3.5" />
-            <span>NA FILA ({pendingCount})</span>
+            <Clock className="w-3.5 h-3.5 flex-shrink-0" />
+            <span className="truncate">
+              <span className="hidden sm:inline">NA </span>FILA ({pendingCount})
+            </span>
           </button>
 
           <button
@@ -87,19 +89,22 @@ export const MovieList: React.FC<MovieListProps> = ({
               sounds.playClick();
               setFilter('watched');
             }}
-            className={`px-3 py-1.5 rounded-lg text-xs font-russo tracking-wide transition-all whitespace-nowrap flex items-center gap-1.5 ${
+            className={`w-full justify-center px-1.5 sm:px-3.5 py-2 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-russo tracking-wide transition-all flex items-center gap-1 sm:gap-1.5 ${
               filter === 'watched'
                 ? 'bg-emerald-600/90 text-white shadow-md border border-emerald-400/60'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <CheckCircle className="w-3.5 h-3.5" />
-            <span>ASSISTIDOS ({watchedCount})</span>
+            <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" />
+            <span className="truncate">
+              <span className="hidden sm:inline">ASSISTIDOS</span>
+              <span className="sm:hidden">VISTOS</span> ({watchedCount})
+            </span>
           </button>
         </div>
 
         {/* Search within playlist */}
-        <div className="relative flex-1 max-w-md">
+        <div className="relative flex-1 max-w-md w-full">
           <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
           <input
             type="text"
@@ -110,17 +115,17 @@ export const MovieList: React.FC<MovieListProps> = ({
           />
         </div>
 
-        {/* Quick Add and Roulette Buttons */}
-        <div className="flex items-center gap-2">
+        {/* Quick Add and Roulette Buttons (Grid 2 cols on mobile, flex on desktop) */}
+        <div className="grid grid-cols-2 sm:flex items-center gap-2 w-full md:w-auto">
           <button
             onClick={() => {
               sounds.playClick();
               onOpenRoulette();
             }}
-            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-soviet-800 to-soviet-700 hover:from-soviet-700 hover:to-soviet-600 text-gold-300 font-russo text-xs rounded-xl border border-gold-500/40 shadow-soviet-glow transition-all"
+            className="flex items-center justify-center gap-1.5 px-3 py-2.5 sm:py-2 bg-gradient-to-r from-soviet-800 to-soviet-700 hover:from-soviet-700 hover:to-soviet-600 text-gold-300 font-russo text-xs rounded-xl border border-gold-500/40 shadow-soviet-glow transition-all"
           >
-            <Sparkles className="w-3.5 h-3.5 text-gold-400 animate-spin-slow" />
-            <span>ROLETA RUSSA</span>
+            <Sparkles className="w-3.5 h-3.5 text-gold-400 animate-spin-slow flex-shrink-0" />
+            <span className="whitespace-nowrap">ROLETA RUSSA</span>
           </button>
 
           <button
@@ -128,9 +133,9 @@ export const MovieList: React.FC<MovieListProps> = ({
               sounds.playClick();
               onOpenAddMovie();
             }}
-            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-2 bg-gold-500 hover:bg-gold-400 text-cinema-950 font-black font-russo text-xs rounded-xl shadow-gold-glow transition-all"
+            className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 sm:py-2 bg-gold-500 hover:bg-gold-400 text-cinema-950 font-black font-russo text-xs rounded-xl shadow-gold-glow transition-all"
           >
-            <span>+ ADICIONAR FILME</span>
+            <span className="whitespace-nowrap">+ ADICIONAR FILME</span>
           </button>
         </div>
 
