@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { 
   Room, 
   RoomMember, 
@@ -40,6 +40,10 @@ export const App: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Track previous pending members to notify approved users with doorbell chime when someone knocks at the portaria
+  const prevPendingMemberIdsRef = useRef<Set<string>>(new Set());
+  const isInitialSyncRef = useRef<boolean>(true);
+
   // Check URL query param for room invitation code and host key
   const [initialRoomCode, setInitialRoomCode] = useState<string>('');
 
@@ -78,6 +82,26 @@ export const App: React.FC = () => {
         }
         setCurrentMember(me);
       }
+
+      // Check if a new comrade has requested entrance at the Portaria
+      const currentPendingMembers = membersData.filter(m => m.status === 'pending');
+      const currentPendingIds = new Set(currentPendingMembers.map(m => m.id));
+
+      if (!isInitialSyncRef.current) {
+        // Any new user requesting entry who wasn't pending before and is not the current user?
+        const hasNewPendingArrival = currentPendingMembers.some(
+          m => !prevPendingMemberIdsRef.current.has(m.id) && m.user_id !== session.userId
+        );
+
+        const isUserApprovedInRoom = me?.status === 'approved' || currentMember?.status === 'approved';
+        if (hasNewPendingArrival && isUserApprovedInRoom) {
+          // Distinct Soviet Portaria door chime (Ding-Dong!)
+          sounds.playDoorbell();
+        }
+      }
+
+      prevPendingMemberIdsRef.current = currentPendingIds;
+      isInitialSyncRef.current = false;
     } catch (err) {
       console.error('Error refreshing room data:', err);
     }
@@ -86,6 +110,10 @@ export const App: React.FC = () => {
   // Set up Realtime listener when inside a room
   useEffect(() => {
     if (!currentRoom) return;
+
+    // Reset sync markers for the new room
+    isInitialSyncRef.current = true;
+    prevPendingMemberIdsRef.current = new Set();
 
     // Initial fetch
     refreshRoomData(currentRoom.id);
@@ -210,6 +238,8 @@ export const App: React.FC = () => {
   // Handle Leave Room
   const handleLeaveRoom = () => {
     sounds.playClick();
+    prevPendingMemberIdsRef.current = new Set();
+    isInitialSyncRef.current = true;
     setCurrentRoom(null);
     setCurrentMember(null);
     setMembers([]);

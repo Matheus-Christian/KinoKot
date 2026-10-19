@@ -153,6 +153,51 @@ class SoundManager {
       // Audio error ignored
     }
   }
+
+  // Portaria / Cinema entrance request chime (Melodic Ding-Dong)
+  playDoorbell() {
+    if (!getSoundEnabled()) return;
+    const ctx = this.getAudioContext();
+    if (!ctx) return;
+
+    try {
+      const now = ctx.currentTime;
+
+      // Ding (G5 - 783.99 Hz)
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(783.99, now);
+      osc1.frequency.exponentialRampToValueAtTime(770, now + 0.38);
+
+      gain1.gain.setValueAtTime(0.24, now);
+      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.42);
+
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+
+      osc1.start(now);
+      osc1.stop(now + 0.42);
+
+      // Dong (C5 - 523.25 Hz) after 200ms
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(523.25, now + 0.2);
+      osc2.frequency.exponentialRampToValueAtTime(510, now + 0.2 + 0.65);
+
+      gain2.gain.setValueAtTime(0.28, now + 0.2);
+      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.2 + 0.7);
+
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+
+      osc2.start(now + 0.2);
+      osc2.stop(now + 0.2 + 0.7);
+    } catch {
+      // Audio error ignored
+    }
+  }
 }
 
 export const sounds = new SoundManager();
