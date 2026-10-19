@@ -73,9 +73,9 @@ export const STREAMING_SERVICES: StreamingOption[] = [
     defaultUrl: 'https://tv.apple.com'
   },
   {
-    id: 'other',
-    name: 'Outro / Web Link',
-    shortName: 'Web',
+    id: 'cinema',
+    name: 'Cinema',
+    shortName: 'Cinema',
     bgColor: 'bg-soviet-800/80',
     textColor: 'text-gold-300',
     borderColor: 'border-gold-500/60',
@@ -85,5 +85,8 @@ export const STREAMING_SERVICES: StreamingOption[] = [
 
 export function getStreamingService(id?: string): StreamingOption | undefined {
   if (!id) return undefined;
+  if (id === 'other' || id === 'cinema') {
+    return STREAMING_SERVICES.find(s => s.id === 'cinema' || s.id === 'other');
+  }
   return STREAMING_SERVICES.find(s => s.id === id);
 }
